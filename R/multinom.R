@@ -20,6 +20,8 @@ multinom <-
              contrasts = NULL, Hess = FALSE, summ = 0, censored = FALSE,
              model = FALSE, ...)
 {
+      
+      print("Using multinom() from the branch 'nnet_xrp' (function not modified, though)")
     class.ind <- function(cl)
     {
         n <- length(cl)
@@ -170,35 +172,78 @@ multinom <-
     fit
 }
 
-predict.multinom <- function(object, newdata, type=c("class","probs"), ...)
+predict.multinom <- function(object, newdata, type=c("class_constr", "class", "probs"), max_regr_crop = NULL, min_regr_crop = NULL, regressors = NULL, ...)
 {
+  
+    print("using predict.multinom() from the branch 'nnet_xrp'")
     if(!inherits(object, "multinom")) stop("not a \"multinom\" fit")
     type <- match.arg(type)
-    if(missing(newdata)) Y <- fitted(object)
+    if(missing(newdata)) Y <- fitted(object)    #xavi: if not newdata, makes prediction on the same data to fit the model
     else {
         newdata <- as.data.frame(newdata)
         rn <- row.names(newdata)
-        Terms <- delete.response(object$terms)
+        Terms <- delete.response(object$terms) #xavi: deletes variable response of the object terms (information of the model)
         m <- model.frame(Terms, newdata, na.action = na.omit,
-                         xlev = object$xlevels)
+                         xlev = object$xlevels)  #xavi: it returns the variables of the model and some other arguments for the model
         if (!is.null(cl <- attr(Terms, "dataClasses")))
             .checkMFClasses(cl, m)
         keep <- match(row.names(m), rn)
         X <- model.matrix(Terms, m, contrasts = object$contrasts)
-        Y1 <- predict.nnet(object, X)
+        Y1 <- predict.nnet(object, X)    #xavi: prediction probabilities are made by predict.nnet
         Y <- matrix(NA, nrow(newdata), ncol(Y1),
                     dimnames = list(rn, colnames(Y1)))
         Y[keep, ] <- Y1
     }
-    switch(type, class={
-        if(length(object$lev) > 2L)
-            Y <- factor(max.col(Y), levels=seq_along(object$lev),
-                        labels=object$lev)
+    switch(type, class_constr={
+        if(length(object$lev) > 2L)    #xavi: lev is the vector of choices
+          print("predicting using predict.multinom() including constraints (max-min of each choice at each variable)")  
+          #Y <- factor(max.col(Y), levels=seq_along(object$lev), labels=object$lev)
+          Y <- as.data.frame(Y)
+          rgsrs <- regressors[!regressors %in% c(regressors[1], regressors[length(regressors)])]
+          n <- ncol(Y)
+          Y1 <- factor(levels=seq_along(object$lev), labels=object$lev)
+
+          for(cs in 1:nrow(newdata)){ 
+            rnd <- 0
+
+            repeat{ 
+              if(rnd == n){ Y1[cs] <- NA; break } # if checked all the choices and none is inside the range, give NA to the prediction
+              
+              crp <- Y[cs,]
+              crp <- sort(crp, partial=n-rnd)[n-rnd]
+              crp <- names(crp)
+              Y1[cs] <- crp
+
+              cond_pred <- newdata[cs, rgsrs]
+              max_crop <- max_regr_crop[max_regr_crop[,1]==crp, ]
+              min_crop <- min_regr_crop[min_regr_crop[,1]==crp, ]
+  
+              max_crop <- max_crop[colnames(cond_pred)] - cond_pred
+              min_crop <- cond_pred - min_crop[colnames(cond_pred)]
+              
+              if(all(max_crop > 0) && all(min_crop > 0)){ print("break"); break 
+              }else{ rnd <- rnd + 1; print("Prediction out of range. Selecting next best choice") }
+            }
+          } #en for cs
+          Y <- Y1
+
         if(length(object$lev) == 2L)
-            Y <- factor(1 + (Y > 0.5), levels=1L:2L, labels=object$lev)
+            Y <- factor(1 + (Y > 0.5), levels=1L:2L, labels=object$lev) #xavi: this should also be modified
         if(length(object$lev) == 0L)
             Y <- factor(max.col(Y), levels=seq_along(object$lab),
-                        labels=object$lab)
+                        labels=object$lab) 
+        
+    }, class={
+      
+      if(length(object$lev) > 2L)
+        Y <- factor(max.col(Y), levels=seq_along(object$lev),
+                    labels=object$lev)
+      if(length(object$lev) == 2L)
+        Y <- factor(1 + (Y > 0.5), levels=1L:2L, labels=object$lev)
+      if(length(object$lev) == 0L)
+        Y <- factor(max.col(Y), levels=seq_along(object$lab),
+                    labels=object$lab)
+      
     }, probs={})
     drop(Y)
 }
