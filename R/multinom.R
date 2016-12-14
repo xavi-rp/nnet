@@ -21,7 +21,7 @@ multinom <-
              model = FALSE, ...)
 {
       
-      print("Using multinom() from the branch 'nnet_xrp' (function not modified, though)")
+      print("Using multinom() from the branch 'nnet_xrp' (function not modified)")
     class.ind <- function(cl)
     {
         n <- length(cl)
@@ -172,10 +172,10 @@ multinom <-
     fit
 }
 
-predict.multinom <- function(object, newdata, type=c("class_constr", "class", "probs"), max_regr_crop = NULL, min_regr_crop = NULL, regressors = NULL, ...)
+predict.multinom <- function(object, newdata, type=c("class_constr", "class", "probs"), path = NULL, max_regr_crop_sc = NULL, min_regr_crop_sc = NULL, regressors = NULL, ...)
 {
   
-    print("using predict.multinom() from the branch 'nnet_xrp'")
+    print("using predict.multinom() from the branch 'nnet_xrp' (modified function!)")
     if(!inherits(object, "multinom")) stop("not a \"multinom\" fit")
     type <- match.arg(type)
     if(missing(newdata)) Y <- fitted(object)    #xavi: if not newdata, makes prediction on the same data to fit the model
@@ -208,19 +208,22 @@ predict.multinom <- function(object, newdata, type=c("class_constr", "class", "p
             repeat{ 
               if(rnd == n){ Y1[cs] <- NA; break } # if checked all the choices and none is inside the range, give NA to the prediction
               
-              crp <- Y[cs,]
-              crp <- sort(crp, partial=n-rnd)[n-rnd]
-              crp <- names(crp)
-              Y1[cs] <- crp
+              if(any(is.na(Y[cs,]))){
+                Y1[cs] <- NA; break
 
+              }else{
+                crp <- names(sort(Y[cs,])[n-rnd])
+                Y1[cs] <- crp
+              }
+               
               cond_pred <- newdata[cs, rgsrs]
-              max_crop <- max_regr_crop[max_regr_crop[,1]==crp, ]
-              min_crop <- min_regr_crop[min_regr_crop[,1]==crp, ]
-  
-              max_crop <- max_crop[colnames(cond_pred)] - cond_pred
-              min_crop <- cond_pred - min_crop[colnames(cond_pred)]
-              
-              if(all(max_crop > 0) && all(min_crop > 0)){ print("break"); break 
+              max_crop <- as.data.frame(max_regr_crop_sc[max_regr_crop_sc[,1]==crp, ])
+              min_crop <- as.data.frame(min_regr_crop_sc[min_regr_crop_sc[,1]==crp, ])
+
+              max_crop <- max_crop[colnames(cond_pred)] >= cond_pred
+              min_crop <- cond_pred >= min_crop[colnames(cond_pred)]
+
+              if(all(max_crop == TRUE) && all(min_crop == TRUE)){ break 
               }else{ rnd <- rnd + 1; print("Prediction out of range. Selecting next best choice") }
             }
           } #en for cs
