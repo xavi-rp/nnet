@@ -197,7 +197,8 @@ predict.multinom <- function(object, newdata, type = c("class_constr", "class", 
     switch(type, class_constr={
         if(length(object$lev) > 2L)    #lev is the vector of choices
           print("predicting using predict.multinom() including constraints (max-min of each choice at each variable)")  
-          Y <- as.data.frame(Y)
+          
+      Y <- as.data.frame(Y)
           rgsrs <- regressors[!regressors %in% c(regressors[1], regressors[length(regressors)])]  # this is for our particular case. We need to remove first (column of choices) and last (categorical) elements 
           n <- ncol(Y)
           Y1 <- factor(levels=seq_along(object$lev), labels=object$lev)
