@@ -172,7 +172,7 @@ multinom <-
     fit
 }
 
-predict.multinom <- function(object, newdata, type=c("class_constr", "class", "probs"), path = NULL, max_regr_crop_sc = NULL, min_regr_crop_sc = NULL, regressors = NULL, ...)
+predict.multinom <- function(object, newdata, type = c("class_constr", "class", "probs"), path = NULL, max_regr_crop_sc = NULL, min_regr_crop_sc = NULL, regressors = NULL, ...)
 {
   
     print("using predict.multinom() from the branch 'nnet_xrp' (modified function!)")
@@ -238,6 +238,7 @@ predict.multinom <- function(object, newdata, type=c("class_constr", "class", "p
     }, class={
       
       if(length(object$lev) > 2L)
+        print("predicting using predict.multinom() without including constraints")  
         Y <- factor(max.col(Y), levels=seq_along(object$lev),
                     labels=object$lev)
       if(length(object$lev) == 2L)
@@ -246,7 +247,7 @@ predict.multinom <- function(object, newdata, type=c("class_constr", "class", "p
         Y <- factor(max.col(Y), levels=seq_along(object$lab),
                     labels=object$lab)
       
-    }, probs={})
+    }, probs={stop("for the purpose of LUD Model, predictions of categories need to be done. Please chose type equal to 'class_constr' or 'class'")})
     drop(Y)
 }
 
