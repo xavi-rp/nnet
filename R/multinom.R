@@ -207,7 +207,9 @@ predict.multinom <- function(object, newdata, type = c("class_constr", "class", 
 
           for(cs in 1:nrow(newdata)){ 
             rnd <- 0
-
+            print("Y1[cs]")
+            print(Y1[cs])
+            
             repeat{ 
               if(rnd == n){ Y1[cs] <- NA; break } # if checked all the choices and none is inside the range, give NA to the prediction
               
