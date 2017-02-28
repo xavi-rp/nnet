@@ -193,7 +193,6 @@ predict.multinom <- function(object, newdata, type = c("class_constr", "class", 
         Y <- matrix(NA, nrow(newdata), ncol(Y1),
                     dimnames = list(rn, colnames(Y1)))
         Y[keep, ] <- Y1
-        View(Y)
     }
     switch(type, class_constr={
         if(length(object$lev) > 2L)    #lev is the vector of choices
